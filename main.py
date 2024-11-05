@@ -231,14 +231,14 @@ class Menu(QWidget):  # класс меню
 
         # объяснение правил
         self.label = QLabel(
-            'Вам будет представлено поле 5*5 или 10*10 клеток \nНа поле будут клетки с картинками животных', self)
+            'Вам будет представлено, ', self)
         self.label.move(0, 0)
         self.label.resize(600, 120)
         self.label.setFont(QFont('Times', 14))
         self.label.show()
 
         self.task = QLabel(
-            'Ваша задача, запомнить места клеток с картинками, \nпосле конца времени нажать клетки в нужном порядке. \nПорядок картинок будет задан над игровым полем.',
+            'Ваша задача, ',
             self)
         self.task.move(0, 120)
         self.task.resize(600, 120)
@@ -254,7 +254,7 @@ class Menu(QWidget):  # класс меню
         self.mode = QComboBox(self)  # поле выбора режима
         self.mode.move(0, 300)
         self.mode.addItem(self.mode_tx)
-        self.mode.addItem('поле 10*10 клеток' if self.mode_tx != 'поле 10*10 клеток' else 'поле 5*5 клеток')
+        self.mode.addItem('поле' if self.mode_tx != 'поле' else 'поле')
         self.mode.setFont(QFont('Times', 20))
         self.mode.resize(350, 60)
         self.mode.show()
