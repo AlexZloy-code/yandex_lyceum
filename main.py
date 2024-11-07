@@ -104,11 +104,12 @@ class Game(QWidget):  # класс самой игры
 class Menu(QWidget):  # класс меню
     def __init__(self):
         super().__init__()
+        self.reg()
 
-        self.setWindowTitle('Авторизация')  # название окна
-        self.setGeometry(600, 600, 600, 600)  # размер окна
-        self.setWindowIcon(QIcon('bear.webp'))  # установление иконки
-        self.setFixedSize(600, 600)  # невозможно изменить размер
+    def reg(self):
+        for i in self.children():
+            if i != self.bg:
+                i.setParent(None)
 
         self.bg = QLabel(self)
         self.bg.setPixmap(QPixmap('фон.webp'))  # задавание фона авторизации и всех вкладок меню
@@ -147,48 +148,25 @@ class Menu(QWidget):  # класс меню
         for i in self.children():
             i.setFont(QFont('Times', 12))  # изменение шрифта
 
-        self.mode_tx = 'поле 5*5 клеток'  # поле по умолчанию
-
         self.aut.clicked.connect(self.check_aut)  # проверка введённых данных и авторизация
+
+        for i in self.children():
+            i.show()
 
     def check_aut(self):
         if self.password.text() and self.login.text():
             lib = sqlite3.connect('gamers.db')
             cur = lib.cursor()
-            res = cur.execute(f"""SELECT result_easy, result_medium, result_insame FROM users
+            res = cur.execute(f"""SELECT admin_status, userid FROM users
         WHERE password = '{self.password.text()}' AND login = '{self.login.text()}'""").fetchall()  # поиск аккаунта
-
-            if not res:  # аккаунта не найден
-                log = cur.execute(f"""SELECT login FROM users""").fetchall()  # все имена
-
-                for i in log:
-                    if self.login.text() in i:  # проверка занятости имени
-                        self.error.setText('Этот логин уже занят')
-                        return False
-
-                if self.password.text().isdigit() or self.password.text().isalpha():  # проверка сложности пароля
-                    self.error.setText('Пароль должен состоять из букв и цифр')
-                    return False
-                
-                if self.login.text().isdigit():  # проверка сложности логина
-                    self.error.setText('Логин не должен быть числом')
-                    return False
-                
-                elif self.login.text()[0].isdigit():  # проверка сложности логина
-                    self.error.setText('Первый символ логина не должен быть цифрой')
-                    return False
-
-                cur.execute(
-                    f"""INSERT INTO users(login, password, result_easy, result_medium, result_insame) VALUES('{self.login.text()}', '{self.password.text()}', '0/0', '0/0', '0/0')""").fetchall()  # создание аккаунта
-                lib.commit()
-
-                self.res = ('0/0', '0/0', '0/0')  # результат этого аккаунта
-            else:
-                self.res = res[0]  # результат этого аккаунта
-
-            self.login = self.login.text()  # имя этого аккаунта
-
+            if not res:
+                self.error.setText('Неверно введен логин или пароль')
+                return False
+            
+            self.admin = res[0][0]
             self.UI()  # переход в меню
+        else:
+            self.error.setText('')
 
     def UI(self):
         for i in self.children():
@@ -196,30 +174,43 @@ class Menu(QWidget):  # класс меню
                 i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         self.setWindowTitle('Menu')
-
+        
         self.login = QLabel(self)
         self.login.setPixmap(QPixmap('login.PNG'))  # картинка с названием игры
         self.login.resize(400, 200)
         self.login.move(100, 0)
 
-        self.rule = QPushButton('Правила игры', self)  # кнопка перехода в правила игры
-        self.rule.move(100, 200)
-        self.rule.resize(400, 60)
+        self.logout = QPushButton('Выйти', self)  # кнопка перехода в правила игры
+        self.logout.move(0, 0)
+        self.logout.resize(200, 60)
+        self.logout.clicked.connect(lambda x: self.reg())  # переход в правила игры
 
-        self.begin_game = QPushButton('Начать игру', self)  # кнопка начала игры
-        self.begin_game.move(100, 300)
-        self.begin_game.resize(400, 60)
+        if self.admin:
+            self.rule = QPushButton('Редактирование пользователей', self)  # кнопка перехода в правила игры
+            self.rule.move(100, 200)
+            self.rule.resize(400, 60)
+            self.rule.clicked.connect(self.rules)  # переход в правила игры
+            self.rule.setFont(QFont('Times', 20))
+        else:
+            self.rule = QPushButton('Правила игры', self)  # кнопка перехода в правила игры
+            self.rule.move(100, 200)
+            self.rule.resize(400, 60)
+            self.rule.clicked.connect(self.rules)  # переход в правила игры
+            self.rule.setFont(QFont('Times', 25))
+
+            self.begin_game = QPushButton('Начать игру', self)  # кнопка начала игры
+            self.begin_game.move(100, 400)
+            self.begin_game.resize(400, 60)
+            self.begin_game.clicked.connect(self.make_game)  # начало игры
+            self.begin_game.setFont(QFont('Times', 25))
+        
+        
 
         self.stat = QPushButton('Рейтинг', self)  # кнопка перехода в рейтинг
-        self.stat.move(100, 400)
+        self.stat.move(100, 300)
         self.stat.resize(400, 60)
-
-        for i in self.children():
-            i.setFont(QFont('Times', 25))
-
-        self.rule.clicked.connect(self.rules)  # переход в правила игры
-        self.begin_game.clicked.connect(self.make_game)  # начало игры
         self.stat.clicked.connect(self.table)  # переход в рейтинг
+        self.stat.setFont(QFont('Times', 25))
 
         for i in self.children():
             i.show()
