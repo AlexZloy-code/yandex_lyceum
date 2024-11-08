@@ -164,6 +164,7 @@ class Menu(QWidget):  # класс меню
                 return False
             
             self.admin = res[0][0]
+            self.mode_tx = 'Easy'
             self.UI()  # переход в меню
         else:
             self.error.setText('')
@@ -203,8 +204,6 @@ class Menu(QWidget):  # класс меню
             self.begin_game.resize(400, 60)
             self.begin_game.clicked.connect(self.make_game)  # начало игры
             self.begin_game.setFont(QFont('Times', 25))
-        
-        
 
         self.stat = QPushButton('Рейтинг', self)  # кнопка перехода в рейтинг
         self.stat.move(100, 300)
@@ -221,33 +220,35 @@ class Menu(QWidget):  # класс меню
                 i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         # объяснение правил
-        self.label = QLabel(
-            'Вам будет представлено, ', self)
+        self.label = QLabel(self)
+        self.label.setText('Перед вами будет круг состоящий из нескольких цветов (от 2 до 6) в зависимости \
+от\nуровня сложности поочерёдно на нем будут загораться сектора.')
         self.label.move(0, 0)
         self.label.resize(600, 120)
-        self.label.setFont(QFont('Times', 14))
+        self.label.setFont(QFont('Times', 11))
         self.label.show()
 
-        self.task = QLabel(
-            'Ваша задача, ',
-            self)
+        self.task = QLabel(self)
+        self.task.setText('Ваша задача, запомнить последовательность свечения секторов\nи воспроизвести её путём \
+нажатия не теже сектора')
         self.task.move(0, 120)
         self.task.resize(600, 120)
-        self.task.setFont(QFont('Times', 14))
+        self.task.setFont(QFont('Times', 13))
         self.task.show()
 
         self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
         self.btn_menu.move(400, 300)
-        self.btn_menu.resize(200, 60)
-        self.btn_menu.setFont(QFont('Times', 25))
+        self.btn_menu.resize(200, 40)
+        self.btn_menu.setFont(QFont('Times', 20))
         self.btn_menu.show()
 
         self.mode = QComboBox(self)  # поле выбора режима
         self.mode.move(0, 300)
         self.mode.addItem(self.mode_tx)
-        self.mode.addItem('поле' if self.mode_tx != 'поле' else 'поле')
-        self.mode.setFont(QFont('Times', 20))
-        self.mode.resize(350, 60)
+        for i in [j for j in ['Easy', 'Medium', 'Hard'] if j != self.mode_tx]:
+            self.mode.addItem(i)
+        self.mode.setFont(QFont('Times', 15))
+        self.mode.resize(150, 40)
         self.mode.show()
 
         self.mode.activated.connect(self.change_mode)  # смена режима
@@ -277,39 +278,45 @@ class Menu(QWidget):  # класс меню
         self.rating = QLabel('Рейтинг', self)  # название окна
         self.rating.move(200, 30)
         self.rating.resize(200, 60)
+        self.rating.setFont(QFont('Times', 25))
 
         lib = sqlite3.connect('gamers.db')
         cur = lib.cursor()
-        stat = list(cur.execute(f"""SELECT result_easy, result_medium, result_insame, login FROM users""").fetchall())  # все результаты - имена
+        stat = list(cur.execute(f"""SELECT result_easy, result_medium, result_insame, login, admin_status FROM users""").fetchall())  # все результаты - имена
 
-        for i in range(len(stat)):
-            if stat[i][0].split('/')[1] != '0':
-                stat[i] = [round(eval(stat[i][0]) * 100, 2), stat[i][1]]  # запись процентного содержания побед к поражениям и имени
-            else:
-                stat[i] = [0, stat[i][1]]  # запись аккаунта без счёта
+        print(stat)
+        stat = [i[:-1] for i in stat if not i[-1]]
 
-        stat.sort(reverse=True)  # сортировка по убыванию
-
-        self.statis = QTableWidget(len(stat), 2, self)  # таблица рейтинга
+        self.statis = QTableWidget(len(stat), 4, self)  # таблица рейтинга
         self.statis.move(0, 100)
-        self.statis.setColumnWidth(0, 200)  # ширина 1 колонки
-        self.statis.setColumnWidth(1, 100)  # ширина 2 колонки
+        self.statis.setColumnWidth(0, 100)  # ширина 1 колонки
+        self.statis.setColumnWidth(1, 99)  # ширина 2 колонки
+        self.statis.setColumnWidth(2, 99)  # ширина 3 колонки
+        self.statis.setColumnWidth(3, 99)  # ширина 4 колонки
 
-        if len(stat) * 40 + 15 <= 415:
-            self.statis.resize(300 + len(str(len(stat))) * 15 + 15, int((len(stat) + 1) * 35.5))  # размеры таблицы
+
+        if stat:
+            self.statis.resize(300 + len(stat) * 60, int((len(stat) + 1) * 30))  # размеры таблицы
         else:
-            self.statis.resize(300 + len(str(len(stat))) * 15 + 35, 396)
+            self.statis.resize(300 + len(stat) * 60, 80)
 
         self.statis.setHorizontalHeaderItem(0, QTableWidgetItem('Имя'))  # название 1 столбца
-        self.statis.setHorizontalHeaderItem(1, QTableWidgetItem('%'))  # название 2 столбца
+        self.statis.setHorizontalHeaderItem(1, QTableWidgetItem('Easy'))  # название 2 столбца
+        self.statis.setHorizontalHeaderItem(2, QTableWidgetItem('Medium'))  # название 3 столбца
+        self.statis.setHorizontalHeaderItem(3, QTableWidgetItem('Hard'))  # название 4 столбца
         self.statis.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # отмена возможности изменить таблицу
+        """ if not self.admin:
+            
+        else:
+ """
 
         for i in range(len(stat)):
-            for x in range(2):
+            for x in range(4):
                 self.statis.setItem(i, x, QTableWidgetItem(str(stat[i][x - 1])))  # запись данных в таблицу
 
         for i in self.children():
-            i.setFont(QFont('Times', 15))
+            if i != self.rating:
+                i.setFont(QFont('Times', 15))
             i.show()
 
 
