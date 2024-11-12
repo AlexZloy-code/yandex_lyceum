@@ -1,11 +1,12 @@
 import random
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QInputDialog
 from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView
 from PyQt6.QtGui import QFont, QIcon, QPixmap
 from PyQt6.QtCore import Qt
 from PyQt6 import QtCore
 import sqlite3
+import csv
 
 
 def make_menu(self):
@@ -166,8 +167,12 @@ class Menu(QWidget):  # класс меню
             self.admin = res[0][0]
             self.mode_tx = 'Easy'
             self.UI()  # переход в меню
+        elif not self.password.text():
+            self.error.setText('Введите пароль')
+        elif not self.login.text():
+            self.error.setText('Введите имя пользователя')
         else:
-            self.error.setText('')
+            self.error.setText('Обратитесь к создателю и покажите как вы добились жизни такой')
 
     def UI(self):
         for i in self.children():
@@ -282,10 +287,8 @@ class Menu(QWidget):  # класс меню
 
         lib = sqlite3.connect('gamers.db')
         cur = lib.cursor()
-        stat = list(cur.execute(f"""SELECT result_easy, result_medium, result_insame, login, admin_status FROM users""").fetchall())  # все результаты - имена
-
-        print(stat)
-        stat = [i[:-1] for i in stat if not i[-1]]
+        stat = list(cur.execute(f"""SELECT result_easy, result_medium, result_insame, login FROM users
+                                    WHERE admin_status = 0""").fetchall())  # все результаты - имена
 
         self.statis = QTableWidget(len(stat), 4, self)  # таблица рейтинга
         self.statis.move(0, 100)
@@ -300,15 +303,18 @@ class Menu(QWidget):  # класс меню
         else:
             self.statis.resize(300 + len(stat) * 60, 80)
 
-        self.statis.setHorizontalHeaderItem(0, QTableWidgetItem('Имя'))  # название 1 столбца
+        self.statis.setHorizontalHeaderItem(0, QTableWidgetItem('Name'))  # название 1 столбца
         self.statis.setHorizontalHeaderItem(1, QTableWidgetItem('Easy'))  # название 2 столбца
         self.statis.setHorizontalHeaderItem(2, QTableWidgetItem('Medium'))  # название 3 столбца
         self.statis.setHorizontalHeaderItem(3, QTableWidgetItem('Hard'))  # название 4 столбца
         self.statis.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # отмена возможности изменить таблицу
-        """ if not self.admin:
-            
-        else:
- """
+        if self.admin:
+            self.btn_save = QPushButton(self)  # кнопка сохранения таблицы
+            self.btn_save.setText('Сохранить')
+            self.btn_save.move(200, 300)
+            self.btn_save.resize(200, 60)
+            self.btn_save.clicked.connect(self.save)
+
 
         for i in range(len(stat)):
             for x in range(4):
@@ -319,6 +325,19 @@ class Menu(QWidget):  # класс меню
                 i.setFont(QFont('Times', 15))
             i.show()
 
+    def save(self):
+        text, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter name of file:')
+        if ok:
+            with open(f'{text}.csv', 'w', encoding="utf8") as csvfile:
+                writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+                writer.writerow(['name', 'result_easy', 'result_medium', 'result_insame'])
+                
+                for i in range(self.statis.rowCount()):
+                    row = []
+                    for j in range(self.statis.columnCount()):
+                        row.append(self.statis.item(i, j).text())
+                    writer.writerow(row)
+            
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
