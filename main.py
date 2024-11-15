@@ -282,37 +282,36 @@ class Menu(QWidget):  # класс меню
         if raiting:
             stat = list(cur.execute(f"""SELECT userid, login, result_easy, result_medium, result_insame FROM users
                                         WHERE admin_status = 0""").fetchall())  # все результаты - имена
+            self.titles = [item[0] for item in cur.description[1:5]]
+            column_count = 4
+            titles = ['Name', 'Easy', 'Medium', 'Hard']
         else:
-            stat = list(cur.execute(f"""SELECT userid, login, result_easy, result_medium, result_insame, admin_status FROM users""").fetchall())
-        self.titles = [item[0] for item in cur.description[1:5]]
+            stat = list(cur.execute(f"""SELECT userid, login, password, result_easy, result_medium, result_insame, admin_status FROM users""").fetchall())
+            self.titles = [item[0] for item in cur.description[1:6]]
+            column_count = 5
+            titles = ['Name', 'Password', 'Easy', 'Medium', 'Hard']
 
-        self.statis_table = QTableWidget(len(stat), 4, self)  # таблица рейтинга
+        self.statis_table = QTableWidget(len(stat), column_count, self)  # таблица рейтинга
         self.statis_table.move(0, 100)
-        self.statis_table.setColumnWidth(0, 100)  # ширина 1 колонки
-        self.statis_table.setColumnWidth(1, 99)  # ширина 2 колонки
-        self.statis_table.setColumnWidth(2, 99)  # ширина 3 колонки
-        self.statis_table.setColumnWidth(3, 99)  # ширина 4 колонки
-
+        for i in range(column_count):
+            self.statis_table.setColumnWidth(i, 100)  # ширина колонок
+            self.statis_table.setHorizontalHeaderItem(i, QTableWidgetItem(titles[i]))  # название колонок
 
         if stat:
-            self.statis_table.resize(300 + len(stat) * 60, int((len(stat) + 1) * 30))  # размеры таблицы
+            self.statis_table.resize(300 + len(stat) * 65, int((len(stat) + 1) * 30))  # размеры таблицы
         else:
             self.statis_table.resize(300 + len(stat) * 60, 80)
-
-        self.statis_table.setHorizontalHeaderItem(0, QTableWidgetItem('Name'))  # название 1 столбца
-        self.statis_table.setHorizontalHeaderItem(1, QTableWidgetItem('Easy'))  # название 2 столбца
-        self.statis_table.setHorizontalHeaderItem(2, QTableWidgetItem('Medium'))  # название 3 столбца
-        self.statis_table.setHorizontalHeaderItem(3, QTableWidgetItem('Hard'))  # название 4 столбца
+        
         if raiting:
             self.statis_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # отмена возможности изменить таблицу
         else:
             stat = [i for i in sorted(stat, key=lambda x: (-x[-1], x[1]))]
-            self.all_items = [[stat[i][x] for x in range(5)] for i in range(len(stat))]
-            stat = [i[:5] for i in stat]
+            self.all_items = [[stat[i][x] for x in range(6)] for i in range(len(stat))]
+            stat = [i[:6] for i in stat]
             self.statis_table.itemChanged.connect(self.item_changed)
 
         for i in range(len(stat)):
-            for x in range(4):
+            for x in range(column_count):
                 self.statis_table.setItem(i, x, QTableWidgetItem(str(stat[i][x + 1])))  # запись данных в таблицу
 
         con.close()
@@ -356,16 +355,14 @@ class Menu(QWidget):  # класс меню
 
     def save_results(self):
         for all_items in self.all_items:
-            print(all_items)
             con = sqlite3.connect('gamers.db')
             cur = con.cursor()
             que = "UPDATE Users SET\n"
-            for i in range(1, 5):
+            for i in range(1, 6):
                 que += f"{self.titles[i - 1]} = '{all_items[i]}'"
-                if i < 4:
+                if i < 5:
                     que += ', '
             que += f"WHERE userid = {all_items[0]}"
-            print(que)
             cur.execute(que)
             con.commit()
         self.all_items.clear()
