@@ -2,7 +2,7 @@ import random
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QInputDialog
 from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
-from PyQt6.QtGui import QFont, QIcon, QPixmap
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainterPath, QPainter, QBrush, QPen, QColor
 from PyQt6.QtCore import Qt
 from PyQt6 import QtCore
 import sqlite3
@@ -18,14 +18,82 @@ def make_menu(self):
 class Game(QWidget):  # класс самой игры
     def __init__(self):
         super().__init__()
-
         global menu
 
         self.setWindowTitle('Фортуна, на память')  # название игры
-
-        for i in self.children():
-            if i != self.timer:
-                i.show()  # отрисовка всего что надо
+        self.setGeometry(0, 0, 480, 480)
+        self.setFixedSize(480, 480)
+        
+        self.login = QLabel(self)
+        self.login.setText(f'Уровень игры: {menu.mode_tx}')
+        self.login.resize(290, 25)
+        self.login.move(100, 0)
+        self.login.setFont(QFont('Times', 20))
+    
+    def paintEvent(self, event):
+        mas = ['Red', 'Green', 'Blue', 'Yellow', 'Purple', 'Orange']
+        con = sqlite3.connect('levels.db')
+        cur = con.cursor()
+        if menu.mode_tx == 'Easy':
+            name1 = mas[random.randint(0, 5)]
+            name2 = mas[random.randint(0, 5)]
+            while name1 == name2:
+                name2 = mas[random.randint(0, 5)]
+            color1, color2 = cur.execute(f"""SELECT color_off, color_on FROM levels
+            WHERE name = '{name1}' OR name = '{name2}'""").fetchall()
+            painter = QPainter()
+            painter.begin(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QBrush(QColor(color1[0])))
+            painter.drawPie(80, 70, 300, 300, 90 * 16, 180 * 16)
+            painter.setBrush(QBrush(QColor(color2[0])))
+            painter.drawPie(80, 70, 300, 300, 270 * 16, 180 * 16)
+            painter.end()
+        elif menu.mode_tx == 'Medium':
+            name1 = mas[random.randint(0, 5)]
+            name2 = mas[random.randint(0, 5)]
+            name3 = mas[random.randint(0, 5)]
+            name4 = mas[random.randint(0, 5)]
+            while len(set([name1, name2, name3, name4])) != len([name1, name2, name3, name4]):
+                name2 = mas[random.randint(0, 5)]
+                name3 = mas[random.randint(0, 5)]
+                name4 = mas[random.randint(0, 5)]
+            color1, color2, color3, color4 = cur.execute(f"""SELECT color_off, color_on FROM levels
+                                                             WHERE
+            name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4}'""").fetchall()
+            painter = QPainter()
+            painter.begin(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QBrush(QColor(color1[0])))
+            painter.drawPie(80, 70, 300, 300, 0 * 16, 90 * 16)
+            painter.setBrush(QBrush(QColor(color2[0])))
+            painter.drawPie(80, 70, 300, 300, 90 * 16, 90 * 16)
+            painter.setBrush(QBrush(QColor(color3[0])))
+            painter.drawPie(80, 70, 300, 300, 180 * 16, 90 * 16)
+            painter.setBrush(QBrush(QColor(color4[0])))
+            painter.drawPie(80, 70, 300, 300, 270 * 16, 90 * 16)
+            painter.end()
+        else:
+            colors = [list(i) for i in cur.execute("SELECT color_off, color_on FROM levels").fetchall()]
+            random.shuffle(colors)
+            color1, color2, color3, color4, color5, color6 = colors
+            painter = QPainter()
+            painter.begin(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QBrush(QColor(color1[0])))
+            painter.drawPie(80, 70, 300, 300, 0 * 16, 60 * 16)
+            painter.setBrush(QBrush(QColor(color2[0])))
+            painter.drawPie(80, 70, 300, 300, 60 * 16, 60 * 16)
+            painter.setBrush(QBrush(QColor(color3[0])))
+            painter.drawPie(80, 70, 300, 300, 120 * 16, 60 * 16)
+            painter.setBrush(QBrush(QColor(color4[0])))
+            painter.drawPie(80, 70, 300, 300, 180 * 16, 60 * 16)
+            painter.setBrush(QBrush(QColor(color5[0])))
+            painter.drawPie(80, 70, 300, 300, 240 * 16, 60 * 16)
+            painter.setBrush(QBrush(QColor(color6[0])))
+            painter.drawPie(80, 70, 300, 300, 300 * 16, 60 * 16)
+            painter.end()
+        cur.close()
 
     def end(self):
         global menu
@@ -33,12 +101,15 @@ class Game(QWidget):  # класс самой игры
         for i in self.children():
             i.deleteLater()  # скрытие всех элементов игры
 
-        lib = sqlite3.connect('gamers.db')
-        cur = lib.cursor()
+        con = sqlite3.connect('gamers.db')
+        cur = con.cursor()
+        mas1 = ['Easy', 'Medium', 'Hard']
+        mas2 = ['result_easy', 'result_medium', 'result_insame']
+        mode = mas2[mas1.index(menu.mode_tx)]
         cur.execute(
-            f"""UPDATE users SET result = '{int(menu.res.split('/')[0]) + self.nom}/{int(menu.res.split('/')[1]) + self.len}'
-             WHERE login = '{menu.login}'""").fetchall()  # запись результата
-        lib.commit()
+            f"""UPDATE users SET {mode} = '{self.count}'
+                WHERE userid = '{menu.id}'""").fetchall()  # запись результата
+        con.commit()
 
         btn_menu = QPushButton('Menu', self)  # выход в меню
         btn_menu.move(400, 200)
@@ -51,44 +122,6 @@ class Game(QWidget):  # класс самой игры
         btn_new_game.resize(200, 60)
         btn_new_game.setFont(QFont('Times', 25))
         btn_new_game.show()
-
-        if self.nom == len(self.picture):
-            win = QLabel(self)  # текст счёта
-            win.move(0, 50)
-            win.resize(450, 60)
-            win.setFont(QFont('Times', 30))
-            win.setText('Всё верно. Счёт ' + str(self.nom))
-            win.show()
-
-            congratulation = QLabel(self)  # поздравление
-            congratulation.move(0, 150)
-            congratulation.resize(400, 400)
-            congratulation.setPixmap(QPixmap('fing.jpg'))
-            congratulation.show()
-        else:
-            defeat = QLabel(self)  # текст счёта
-            defeat.move(0, 0)
-            defeat.resize(600, 60)
-            defeat.setFont(QFont('Times', 25))
-            defeat.setText(f'Вы ошиблись. Счёт {self.nom}')
-            defeat.show()
-
-            right = QLabel(self)  # какая ошибка
-            right.move(0, 100)
-            right.resize(600, 60)
-            right.setFont(QFont('Times', 25))
-            for i in range(self.len):
-                if self.sender() == self.keys[i][1]:
-                    right.setText('Правильно: ' + self.pic_login[self.keys[self.nom][2]])
-                    break
-                else:
-                    right.setText('Другая кнопка')
-
-            right.show()  # отображение ошибки
-
-            btn_new_game.move(0, 200)  # размещение кнопок при допущении ошибки
-
-            btn_menu.move(400, 200)
 
         btn_menu.clicked.connect(lambda x: make_menu(self))  # выход в меню
         btn_new_game.clicked.connect(self.new_game)  # создание новой игры
@@ -109,12 +142,7 @@ class Menu(QWidget):  # класс меню
 
     def reg(self):
         for i in self.children():
-            if i != self.bg:
-                i.setParent(None)
-
-        self.bg = QLabel(self)
-        self.bg.setPixmap(QPixmap('фон.webp'))  # задавание фона авторизации и всех вкладок меню
-        self.bg.resize(600, 600)  # размер фона
+            i.setParent(None)
 
         self.aut = QPushButton(self)  # кнопка проверки авторизации или создания аккаунта
         self.aut.setText('Авторизация')
@@ -156,15 +184,15 @@ class Menu(QWidget):  # класс меню
 
     def check_aut(self):
         if self.password.text() and self.login.text():
-            lib = sqlite3.connect('gamers.db')
-            cur = lib.cursor()
+            con = sqlite3.connect('gamers.db')
+            cur = con.cursor()
             res = cur.execute(f"""SELECT admin_status, userid FROM users
         WHERE password = '{self.password.text()}' AND login = '{self.login.text()}'""").fetchall()  # поиск аккаунта
             if not res:
                 self.error.setText('Неверно введен логин или пароль')
                 return False
             
-            self.admin = res[0][0]
+            self.admin, self.id = res[0]
             self.mode_tx = 'Easy'
             self.UI()  # переход в меню
         elif not self.password.text():
@@ -176,8 +204,7 @@ class Menu(QWidget):  # класс меню
 
     def UI(self):
         for i in self.children():
-            if i != self.bg:
-                i.setParent(None)  # скрытие элементов предыдущей вкладки
+            i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         self.setWindowTitle('Menu')
         
@@ -226,8 +253,7 @@ class Menu(QWidget):  # класс меню
 
     def rules(self):
         for i in self.children():
-            if i != self.bg:
-                i.setParent(None)  # скрытие элементов предыдущей вкладки
+            i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         # объяснение правил
         self.label = QLabel(self)
@@ -322,8 +348,7 @@ class Menu(QWidget):  # класс меню
 
     def admin_panel(self):
         for i in self.children():
-            if i != self.bg:
-                i.setParent(None)  # скрытие элементов предыдущей вкладки
+            i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
         self.btn_menu.move(400, 300)
@@ -369,8 +394,7 @@ class Menu(QWidget):  # класс меню
 
     def table(self):
         for i in self.children():
-            if i != self.bg:
-                i.setParent(None)  # скрытие элементов предыдущей вкладки
+            i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
         self.btn_menu.move(400, 300)
