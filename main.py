@@ -1,7 +1,7 @@
 import random
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QInputDialog
-from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView
+from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
 from PyQt6.QtGui import QFont, QIcon, QPixmap
 from PyQt6.QtCore import Qt
 from PyQt6 import QtCore
@@ -182,20 +182,25 @@ class Menu(QWidget):  # класс меню
         self.setWindowTitle('Menu')
         
         self.login = QLabel(self)
-        self.login.setPixmap(QPixmap('login.PNG'))  # картинка с названием игры
-        self.login.resize(400, 200)
-        self.login.move(100, 0)
-
-        self.logout = QPushButton('Выйти', self)  # кнопка перехода в правила игры
-        self.logout.move(0, 0)
-        self.logout.resize(200, 60)
+        self.login.setPixmap(QPixmap('name.jpg'))  # картинка с названием игры
+        self.login.resize(380, 140)
+        self.login.move(100, 50)
+        
+        self.logout = QPushButton(self)  # кнопка перехода в правила игры
+        self.logout.move(549, 0)
+        self.logout.resize(51, 51)
+        
         self.logout.clicked.connect(lambda x: self.reg())  # переход в правила игры
+        icon = QIcon()
+        icon.addPixmap(QPixmap("exit.jpg"))
+        self.logout.setIcon(icon)
+        self.logout.setIconSize(QtCore.QSize(100, 100))
 
         if self.admin:
             self.rule = QPushButton('Редактирование пользователей', self)  # кнопка перехода в правила игры
             self.rule.move(100, 200)
             self.rule.resize(400, 60)
-            self.rule.clicked.connect(self.rules)  # переход в правила игры
+            self.rule.clicked.connect(self.admin_panel)  # переход в правила игры
             self.rule.setFont(QFont('Times', 20))
         else:
             self.rule = QPushButton('Правила игры', self)  # кнопка перехода в правила игры
@@ -269,6 +274,101 @@ class Menu(QWidget):  # класс меню
         self.close()  # скрытие меню
         game = Game()  # создание игры
         game.show()
+        
+    def paint_table(self, raiting=False):
+        con = sqlite3.connect('gamers.db')
+        cur = con.cursor()
+        
+        if raiting:
+            stat = list(cur.execute(f"""SELECT userid, login, result_easy, result_medium, result_insame FROM users
+                                        WHERE admin_status = 0""").fetchall())  # все результаты - имена
+        else:
+            stat = list(cur.execute(f"""SELECT userid, login, result_easy, result_medium, result_insame, admin_status FROM users""").fetchall())
+        self.titles = [item[0] for item in cur.description[1:5]]
+
+        self.statis_table = QTableWidget(len(stat), 4, self)  # таблица рейтинга
+        self.statis_table.move(0, 100)
+        self.statis_table.setColumnWidth(0, 100)  # ширина 1 колонки
+        self.statis_table.setColumnWidth(1, 99)  # ширина 2 колонки
+        self.statis_table.setColumnWidth(2, 99)  # ширина 3 колонки
+        self.statis_table.setColumnWidth(3, 99)  # ширина 4 колонки
+
+
+        if stat:
+            self.statis_table.resize(300 + len(stat) * 60, int((len(stat) + 1) * 30))  # размеры таблицы
+        else:
+            self.statis_table.resize(300 + len(stat) * 60, 80)
+
+        self.statis_table.setHorizontalHeaderItem(0, QTableWidgetItem('Name'))  # название 1 столбца
+        self.statis_table.setHorizontalHeaderItem(1, QTableWidgetItem('Easy'))  # название 2 столбца
+        self.statis_table.setHorizontalHeaderItem(2, QTableWidgetItem('Medium'))  # название 3 столбца
+        self.statis_table.setHorizontalHeaderItem(3, QTableWidgetItem('Hard'))  # название 4 столбца
+        if raiting:
+            self.statis_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # отмена возможности изменить таблицу
+        else:
+            stat = [i for i in sorted(stat, key=lambda x: (-x[-1], x[1]))]
+            self.all_items = [[stat[i][x] for x in range(5)] for i in range(len(stat))]
+            stat = [i[:5] for i in stat]
+            self.statis_table.itemChanged.connect(self.item_changed)
+
+        for i in range(len(stat)):
+            for x in range(4):
+                self.statis_table.setItem(i, x, QTableWidgetItem(str(stat[i][x + 1])))  # запись данных в таблицу
+
+        con.close()
+
+    def item_changed(self, item):
+        self.flag_of_change_item = True
+        self.all_items[item.row()][item.column() + 1] = item.text()
+
+    def admin_panel(self):
+        for i in self.children():
+            if i != self.bg:
+                i.setParent(None)  # скрытие элементов предыдущей вкладки
+
+        self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
+        self.btn_menu.move(400, 300)
+        self.btn_menu.resize(200, 60)
+        self.btn_menu.clicked.connect(self.check_out)
+
+        self.rating = QLabel('Редактирование пользователей', self)  # название окна
+        self.rating.move(200, 30)
+        self.rating.resize(200, 60)
+        self.rating.setFont(QFont('Times', 25))
+
+        self.flag_of_change_item = False
+        self.all_items = list()
+
+        self.paint_table()
+
+        for i in self.children():
+            if i != self.rating:
+                i.setFont(QFont('Times', 15))
+            i.show()
+
+    def check_out(self):
+        if self.flag_of_change_item:
+            answer = QMessageBox.question(self, '', "Вы подтверждаете изменения",
+                                          buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if answer == QMessageBox.StandardButton.Yes:
+                self.save_results()
+        self.UI()
+
+    def save_results(self):
+        for all_items in self.all_items:
+            print(all_items)
+            con = sqlite3.connect('gamers.db')
+            cur = con.cursor()
+            que = "UPDATE Users SET\n"
+            for i in range(1, 5):
+                que += f"{self.titles[i - 1]} = '{all_items[i]}'"
+                if i < 4:
+                    que += ', '
+            que += f"WHERE userid = {all_items[0]}"
+            print(que)
+            cur.execute(que)
+            con.commit()
+        self.all_items.clear()
 
     def table(self):
         for i in self.children():
@@ -285,40 +385,14 @@ class Menu(QWidget):  # класс меню
         self.rating.resize(200, 60)
         self.rating.setFont(QFont('Times', 25))
 
-        lib = sqlite3.connect('gamers.db')
-        cur = lib.cursor()
-        stat = list(cur.execute(f"""SELECT result_easy, result_medium, result_insame, login FROM users
-                                    WHERE admin_status = 0""").fetchall())  # все результаты - имена
+        self.paint_table(True)
 
-        self.statis = QTableWidget(len(stat), 4, self)  # таблица рейтинга
-        self.statis.move(0, 100)
-        self.statis.setColumnWidth(0, 100)  # ширина 1 колонки
-        self.statis.setColumnWidth(1, 99)  # ширина 2 колонки
-        self.statis.setColumnWidth(2, 99)  # ширина 3 колонки
-        self.statis.setColumnWidth(3, 99)  # ширина 4 колонки
-
-
-        if stat:
-            self.statis.resize(300 + len(stat) * 60, int((len(stat) + 1) * 30))  # размеры таблицы
-        else:
-            self.statis.resize(300 + len(stat) * 60, 80)
-
-        self.statis.setHorizontalHeaderItem(0, QTableWidgetItem('Name'))  # название 1 столбца
-        self.statis.setHorizontalHeaderItem(1, QTableWidgetItem('Easy'))  # название 2 столбца
-        self.statis.setHorizontalHeaderItem(2, QTableWidgetItem('Medium'))  # название 3 столбца
-        self.statis.setHorizontalHeaderItem(3, QTableWidgetItem('Hard'))  # название 4 столбца
-        self.statis.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # отмена возможности изменить таблицу
         if self.admin:
             self.btn_save = QPushButton(self)  # кнопка сохранения таблицы
             self.btn_save.setText('Сохранить')
             self.btn_save.move(200, 300)
             self.btn_save.resize(200, 60)
             self.btn_save.clicked.connect(self.save)
-
-
-        for i in range(len(stat)):
-            for x in range(4):
-                self.statis.setItem(i, x, QTableWidgetItem(str(stat[i][x - 1])))  # запись данных в таблицу
 
         for i in self.children():
             if i != self.rating:
@@ -332,10 +406,10 @@ class Menu(QWidget):  # класс меню
                 writer = csv.writer(csvfile, delimiter=';', quotechar='"')
                 writer.writerow(['name', 'result_easy', 'result_medium', 'result_insame'])
                 
-                for i in range(self.statis.rowCount()):
+                for i in range(self.statis_table.rowCount()):
                     row = []
-                    for j in range(self.statis.columnCount()):
-                        row.append(self.statis.item(i, j).text())
+                    for j in range(self.statis_table.columnCount()):
+                        row.append(self.statis_table.item(i, j).text())
                     writer.writerow(row)
             
 
