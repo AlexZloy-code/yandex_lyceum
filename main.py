@@ -29,10 +29,10 @@ class Game(QWidget):  # класс самой игры
         self.login.resize(290, 25)
         self.login.move(100, 0)
         self.login.setFont(QFont('Times', 20))
-    
+
     def paintEvent(self, event):
         mas = ['Red', 'Green', 'Blue', 'Yellow', 'Purple', 'Orange']
-        con = sqlite3.connect('levels.db')
+        con = sqlite3.connect('db_files/levels.db')
         cur = con.cursor()
         if menu.mode_tx == 'Easy':
             name1 = mas[random.randint(0, 5)]
@@ -44,10 +44,10 @@ class Game(QWidget):  # класс самой игры
             painter = QPainter()
             painter.begin(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setBrush(QBrush(QColor(color1[0])))
-            painter.drawPie(80, 70, 300, 300, 90 * 16, 180 * 16)
-            painter.setBrush(QBrush(QColor(color2[0])))
-            painter.drawPie(80, 70, 300, 300, 270 * 16, 180 * 16)
+            for color in (color1[0], color2[0]):
+                painter.setBrush(QBrush(QColor(color)))
+                painter.drawPie(80, 70, 300, 300, i * 16, 180 * 16)
+                i += 180
             painter.end()
         elif menu.mode_tx == 'Medium':
             name1 = mas[random.randint(0, 5)]
@@ -64,14 +64,10 @@ class Game(QWidget):  # класс самой игры
             painter = QPainter()
             painter.begin(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setBrush(QBrush(QColor(color1[0])))
-            painter.drawPie(80, 70, 300, 300, 0 * 16, 90 * 16)
-            painter.setBrush(QBrush(QColor(color2[0])))
-            painter.drawPie(80, 70, 300, 300, 90 * 16, 90 * 16)
-            painter.setBrush(QBrush(QColor(color3[0])))
-            painter.drawPie(80, 70, 300, 300, 180 * 16, 90 * 16)
-            painter.setBrush(QBrush(QColor(color4[0])))
-            painter.drawPie(80, 70, 300, 300, 270 * 16, 90 * 16)
+            for color in (color1[0], color2[0], color3[0], color4[0]):
+                painter.setBrush(QBrush(QColor(color)))
+                painter.drawPie(80, 70, 300, 300, i * 16, 90 * 16)
+                i += 90
             painter.end()
         else:
             colors = [list(i) for i in cur.execute("SELECT color_off, color_on FROM levels").fetchall()]
@@ -80,18 +76,11 @@ class Game(QWidget):  # класс самой игры
             painter = QPainter()
             painter.begin(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setBrush(QBrush(QColor(color1[0])))
-            painter.drawPie(80, 70, 300, 300, 0 * 16, 60 * 16)
-            painter.setBrush(QBrush(QColor(color2[0])))
-            painter.drawPie(80, 70, 300, 300, 60 * 16, 60 * 16)
-            painter.setBrush(QBrush(QColor(color3[0])))
-            painter.drawPie(80, 70, 300, 300, 120 * 16, 60 * 16)
-            painter.setBrush(QBrush(QColor(color4[0])))
-            painter.drawPie(80, 70, 300, 300, 180 * 16, 60 * 16)
-            painter.setBrush(QBrush(QColor(color5[0])))
-            painter.drawPie(80, 70, 300, 300, 240 * 16, 60 * 16)
-            painter.setBrush(QBrush(QColor(color6[0])))
-            painter.drawPie(80, 70, 300, 300, 300 * 16, 60 * 16)
+            i = 0
+            for color in (color1[0], color2[0], color3[0], color4[0], color5[0], color6[0]):
+                painter.setBrush(QBrush(QColor(color)))
+                painter.drawPie(80, 70, 300, 300, i * 16, 60 * 16)
+                i += 60
             painter.end()
         cur.close()
 
@@ -101,7 +90,7 @@ class Game(QWidget):  # класс самой игры
         for i in self.children():
             i.deleteLater()  # скрытие всех элементов игры
 
-        con = sqlite3.connect('gamers.db')
+        con = sqlite3.connect('db_files/gamers.db')
         cur = con.cursor()
         mas1 = ['Easy', 'Medium', 'Hard']
         mas2 = ['result_easy', 'result_medium', 'result_insame']
@@ -184,7 +173,7 @@ class Menu(QWidget):  # класс меню
 
     def check_aut(self):
         if self.password.text() and self.login.text():
-            con = sqlite3.connect('gamers.db')
+            con = sqlite3.connect('db_files/gamers.db')
             cur = con.cursor()
             res = cur.execute(f"""SELECT admin_status, userid FROM users
         WHERE password = '{self.password.text()}' AND login = '{self.login.text()}'""").fetchall()  # поиск аккаунта
@@ -209,7 +198,7 @@ class Menu(QWidget):  # класс меню
         self.setWindowTitle('Menu')
         
         self.login = QLabel(self)
-        self.login.setPixmap(QPixmap('name.jpg'))  # картинка с названием игры
+        self.login.setPixmap(QPixmap('static/name.jpg'))  # картинка с названием игры
         self.login.resize(380, 140)
         self.login.move(100, 50)
         
@@ -219,7 +208,7 @@ class Menu(QWidget):  # класс меню
         
         self.logout.clicked.connect(lambda x: self.reg())  # переход в правила игры
         icon = QIcon()
-        icon.addPixmap(QPixmap("exit.jpg"))
+        icon.addPixmap(QPixmap("static/exit.jpg"))
         self.logout.setIcon(icon)
         self.logout.setIconSize(QtCore.QSize(100, 100))
 
@@ -302,7 +291,7 @@ class Menu(QWidget):  # класс меню
         game.show()
         
     def paint_table(self, raiting=False):
-        con = sqlite3.connect('gamers.db')
+        con = sqlite3.connect('db_files/gamers.db')
         cur = con.cursor()
         
         if raiting:
@@ -380,7 +369,7 @@ class Menu(QWidget):  # класс меню
 
     def save_results(self):
         for all_items in self.all_items:
-            con = sqlite3.connect('gamers.db')
+            con = sqlite3.connect('db_files/gamers.db')
             cur = con.cursor()
             que = "UPDATE Users SET\n"
             for i in range(1, 6):
