@@ -2,11 +2,11 @@ import random
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QInputDialog
 from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
-from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainterPath, QPainter, QBrush, QPen, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter, QBrush, QColor
 from PyQt6 import QtCore
 import sqlite3
 import csv
+import time
 
 
 def make_menu(self):
@@ -29,8 +29,9 @@ class Game(QWidget):  # класс самой игры
         self.login.resize(290, 25)
         self.login.move(100, 0)
         self.login.setFont(QFont('Times', 20))
+        self.cor_posled = [1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
+        self.posled = []
 
-    def paintEvent(self, event):
         mas = ['Red', 'Green', 'Blue', 'Yellow', 'Purple', 'Orange']
         con = sqlite3.connect('db_files/levels.db')
         cur = con.cursor()
@@ -39,16 +40,8 @@ class Game(QWidget):  # класс самой игры
             name2 = mas[random.randint(0, 5)]
             while name1 == name2:
                 name2 = mas[random.randint(0, 5)]
-            color1, color2 = cur.execute(f"""SELECT color_off, color_on FROM levels
+            self.color1, self.color2 = cur.execute(f"""SELECT color_off, color_on FROM levels
             WHERE name = '{name1}' OR name = '{name2}'""").fetchall()
-            painter = QPainter()
-            painter.begin(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            for color in (color1[0], color2[0]):
-                painter.setBrush(QBrush(QColor(color)))
-                painter.drawPie(80, 70, 300, 300, i * 16, 180 * 16)
-                i += 180
-            painter.end()
         elif menu.mode_tx == 'Medium':
             name1 = mas[random.randint(0, 5)]
             name2 = mas[random.randint(0, 5)]
@@ -58,31 +51,105 @@ class Game(QWidget):  # класс самой игры
                 name2 = mas[random.randint(0, 5)]
                 name3 = mas[random.randint(0, 5)]
                 name4 = mas[random.randint(0, 5)]
-            color1, color2, color3, color4 = cur.execute(f"""SELECT color_off, color_on FROM levels
-                                                             WHERE
-            name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4}'""").fetchall()
-            painter = QPainter()
-            painter.begin(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            for color in (color1[0], color2[0], color3[0], color4[0]):
-                painter.setBrush(QBrush(QColor(color)))
-                painter.drawPie(80, 70, 300, 300, i * 16, 90 * 16)
-                i += 90
-            painter.end()
+            self.color1, self.color2, self.color3, self.color4 = cur.execute(f"""SELECT color_off, color_on FROM levels
+WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4}'""").fetchall()
         else:
             colors = [list(i) for i in cur.execute("SELECT color_off, color_on FROM levels").fetchall()]
             random.shuffle(colors)
-            color1, color2, color3, color4, color5, color6 = colors
+            self.color1, self.color2, self.color3, self.color4, self.color5, self.color6 = colors
+        cur.close()
+
+        self.do_paint = True
+        self.do_paint_start = True
+        self.update()
+        self.make_posled()
+    
+    def make_posled(self):
+        if menu.mode_tx == 'Easy':
+            self.cor_posled.append(random.randint(0, 1))
+        elif menu.mode_tx == 'Medium':
+            self.cor_posled.append(random.randint(0, 3))
+        else:
+            self.cor_posled.append(random.randint(0, 5))
+        for i in self.cor_posled:
+            self.do_paint = True
+            self.inx = i
+            self.mode = True
+            self.update()
+            
+            self.mode = False
+            self.update()
+        self.posled = []
+
+    def paintEvent(self, event):
+        if self.do_paint:
             painter = QPainter()
             painter.begin(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            i = 0
-            for color in (color1[0], color2[0], color3[0], color4[0], color5[0], color6[0]):
-                painter.setBrush(QBrush(QColor(color)))
-                painter.drawPie(80, 70, 300, 300, i * 16, 60 * 16)
-                i += 60
+            if self.do_paint_start:
+                if menu.mode_tx == 'Easy':
+                    i = 90
+                    for color in (self.color1[0], self.color2[0]):
+                        painter.setBrush(QBrush(QColor(color)))
+                        painter.drawPie(80, 70, 300, 300, i * 16, 180 * 16)
+                        i += 180
+                elif menu.mode_tx == 'Medium':
+                    i = 0
+                    for color in (self.color1[0], self.color2[0], self.color3[0], self.color4[0]):
+                        painter.setBrush(QBrush(QColor(color)))
+                        painter.drawPie(80, 70, 300, 300, i * 16, 90 * 16)
+                        i += 90
+                else:
+                    i = 0
+                    for color in (self.color1[0], self.color2[0], self.color3[0], self.color4[0], self.color5[0], self.color6[0]):
+                        painter.setBrush(QBrush(QColor(color)))
+                        painter.drawPie(80, 70, 300, 300, i * 16, 60 * 16)
+                        i += 60
+                self.do_paint_start = False
+            else:
+                if menu.mode_tx == 'Easy':
+                    color1 = [self.color1, self.color2][self.inx]
+                    
+                    j = 90
+                    for color in (self.color1[0], self.color2[0]):
+                        if color != color1[0]:
+                            painter.setBrush(QBrush(QColor(color)))
+                        else:
+                            if self.mode:
+                                painter.setBrush(QBrush(QColor(color1[1])))
+                            else:
+                                painter.setBrush(QBrush(QColor(color1[0])))
+                        painter.drawPie(80, 70, 300, 300, j * 16, 180 * 16)
+                        j += 180
+                elif menu.mode_tx == 'Medium':
+                    color1 = [self.color1, self.color2, self.color3, self.color4][self.inx]
+                    j = 0
+                    for color in (self.color1[0], self.color2[0], self.color3[0], self.color4[0]):
+                        if color != color1[0]:
+                            painter.setBrush(QBrush(QColor(color)))
+                        else:
+                            if self.mode:
+                                painter.setBrush(QBrush(QColor(color1[1])))
+                            else:
+                                painter.setBrush(QBrush(QColor(color1[0])))
+                        painter.drawPie(80, 70, 300, 300, j * 16, 90 * 16)
+                        j += 90
+                else:
+                    color1 = [self.color1[0], self.color2[0], self.color3[0], self.color4[0], self.color5[0], self.color6[0]]
+                    j = 0
+                    for color in (self.color1[0], self.color2[0], self.color3[0], self.color4[0], self.color5[0], self.color6[0]):
+                        if color != color1[0]:
+                            painter.setBrush(QBrush(QColor(color)))
+                        else:
+                            if self.mode:
+                                painter.setBrush(QBrush(QColor(color1[1])))
+                            else:
+                                painter.setBrush(QBrush(QColor(color1[0])))
+                        painter.drawPie(80, 70, 300, 300, j * 16, 60 * 16)
+                        j += 60
+            time.sleep(0.3)
             painter.end()
-        cur.close()
+               
+    
 
     def end(self):
         global menu
@@ -176,13 +243,14 @@ class Menu(QWidget):  # класс меню
             con = sqlite3.connect('db_files/gamers.db')
             cur = con.cursor()
             res = cur.execute(f"""SELECT admin_status, userid FROM users
-        WHERE password = '{self.password.text()}' AND login = '{self.login.text()}'""").fetchall()  # поиск аккаунта
+                                                              WHERE password = '{self.password.text()}' 
+                                                              AND login = '{self.login.text()}'""").fetchall()  # поиск аккаунта
             if not res:
                 self.error.setText('Неверно введен логин или пароль')
                 return False
             
             self.admin, self.id = res[0]
-            self.mode_tx = 'Easy'
+            self.mode_tx = 'Hard'
             self.UI()  # переход в меню
         elif not self.password.text():
             self.error.setText('Введите пароль')
