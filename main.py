@@ -6,7 +6,6 @@ from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter, QBrush, QColor
 from PyQt6 import QtCore
 import sqlite3
 import csv
-import time
 
 
 def make_menu(self):
@@ -29,7 +28,7 @@ class Game(QWidget):  # класс самой игры
         self.login.resize(290, 25)
         self.login.move(100, 0)
         self.login.setFont(QFont('Times', 20))
-        self.cor_posled = [1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
+        self.cor_posled = []
         self.posled = []
 
         mas = ['Red', 'Green', 'Blue', 'Yellow', 'Purple', 'Orange']
@@ -59,7 +58,7 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
             self.color1, self.color2, self.color3, self.color4, self.color5, self.color6 = colors
         cur.close()
 
-        self.do_paint = True
+        self.do_paint = False
         self.do_paint_start = True
         self.update()
         self.make_posled()
@@ -74,12 +73,82 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
         for i in self.cor_posled:
             self.do_paint = True
             self.inx = i
-            self.mode = True
-            self.update()
-            
             self.mode = False
             self.update()
-        self.posled = []
+    
+    def proba(self):
+        time = QtCore.QDateTime.currentDateTime().addSecs(1)
+        while QtCore.QDateTime.currentDateTime() < time:
+            pass
+        self.mode = True
+        self.update()
+        self.setMouseTracking(True)
+
+    def mousePressEvent(self, event):
+        if menu.mode_tx == 'Easy':
+            if (event.pos().x() - 230) ** 2 + (event.pos().y() - 220) ** 2 <= 150 ** 2:
+                if event.pos().y() == 220:
+                    return
+                elif event.pos().y() > 220:
+                    i = 0
+                else:
+                    i = 1
+                self.do_paint = True
+                self.inx = i
+                self.mode = False
+                self.update()
+                self.posled.append(i)
+                print(self.posled)
+                print(self.cor_posled)
+                print('\n\n')
+                if self.posled != self.cor_posled[:len(self.posled)]:
+                    return self.end()
+                elif self.posled == self.cor_posled:
+                    self.posled = []
+                    self.make_posled()
+        elif menu.mode_tx == 'Medium':
+            if (event.pos().x() - 80) ** 2 + (event.pos().y() - 70) ** 2 <= 300:
+                if event.pos().x() == 80 or event.pos().y() == 70:
+                    return
+                elif event.pos().x() > 80 and event.pos().y() > 70:
+                    i = 0
+                elif event.pos().x() < 80 and event.pos().y() > 70:
+                    i = 1
+                elif event.pos().x() < 80 and event.pos().y() < 70:
+                    i = 2
+                else:
+                    i = 3
+                self.do_paint = True
+                self.inx = i
+                self.mode = False
+                self.update()
+                self.posled.append(i)
+                if self.posled not in self.cor_posled:
+                    self.end()
+                else:
+                    self.make_posled()
+        else:
+            if (event.pos().x() - 80) ** 2 + (event.pos().y() - 70) ** 2 <= 300:
+                if (event.pos().x() - 80) == (event.pos().y() - 70) or (event.pos().x() - 80) == -(event.pos().y() - 70) or event.pos().y() == 70:
+                    return
+                elif (event.pos().x() - 80) == (event.pos().y() - 70):
+                    i = 0
+                elif event.pos().x() < 80 and event.pos().y() > 70:
+                    i = 1
+                elif event.pos().x() < 80 and event.pos().y() < 70:
+                    i = 2
+                else:
+                    i = 3
+                self.do_paint = True
+                self.inx = i
+                self.mode = False
+                self.update()
+                self.posled.append(i)
+                if self.posled not in self.cor_posled:
+                    self.end()
+                    self.posled = []
+                else:
+                    self.make_posled()
 
     def paintEvent(self, event):
         if self.do_paint:
@@ -107,49 +176,49 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
                 self.do_paint_start = False
             else:
                 if menu.mode_tx == 'Easy':
+                    j1 = [90, 270][self.inx]
                     color1 = [self.color1, self.color2][self.inx]
-                    
                     j = 90
                     for color in (self.color1[0], self.color2[0]):
                         if color != color1[0]:
                             painter.setBrush(QBrush(QColor(color)))
                         else:
-                            if self.mode:
-                                painter.setBrush(QBrush(QColor(color1[1])))
-                            else:
-                                painter.setBrush(QBrush(QColor(color1[0])))
+                            painter.setBrush(QBrush(QColor(color1[1])))
                         painter.drawPie(80, 70, 300, 300, j * 16, 180 * 16)
                         j += 180
+                    if self.mode:
+                        painter.setBrush(QBrush(QColor(color1[0])))
+                        painter.drawPie(80, 70, 300, 300, j1 * 16, 180 * 16)
                 elif menu.mode_tx == 'Medium':
+                    j1 = [0, 90, 180, 270][self.inx]
                     color1 = [self.color1, self.color2, self.color3, self.color4][self.inx]
                     j = 0
                     for color in (self.color1[0], self.color2[0], self.color3[0], self.color4[0]):
                         if color != color1[0]:
                             painter.setBrush(QBrush(QColor(color)))
                         else:
-                            if self.mode:
-                                painter.setBrush(QBrush(QColor(color1[1])))
-                            else:
-                                painter.setBrush(QBrush(QColor(color1[0])))
+                            painter.setBrush(QBrush(QColor(color1[1])))
                         painter.drawPie(80, 70, 300, 300, j * 16, 90 * 16)
                         j += 90
+                    if self.mode:
+                        painter.setBrush(QBrush(QColor(color1[0])))
+                        painter.drawPie(80, 70, 300, 300, j1 * 16, 90 * 16)
                 else:
-                    color1 = [self.color1[0], self.color2[0], self.color3[0], self.color4[0], self.color5[0], self.color6[0]]
+                    j1 = [0, 60, 120, 180, 240, 300][self.inx]
+                    color1 = [self.color1, self.color2, self.color3, self.color4, self.color5, self.color6][self.inx]
                     j = 0
                     for color in (self.color1[0], self.color2[0], self.color3[0], self.color4[0], self.color5[0], self.color6[0]):
                         if color != color1[0]:
                             painter.setBrush(QBrush(QColor(color)))
                         else:
-                            if self.mode:
-                                painter.setBrush(QBrush(QColor(color1[1])))
-                            else:
-                                painter.setBrush(QBrush(QColor(color1[0])))
+                            painter.setBrush(QBrush(QColor(color1[1])))
                         painter.drawPie(80, 70, 300, 300, j * 16, 60 * 16)
                         j += 60
-            time.sleep(0.3)
+                    if self.mode:
+                        painter.setBrush(QBrush(QColor(color1[0])))
+                        painter.drawPie(80, 70, 300, 300, j1 * 16, 60 * 16)
+                self.proba()
             painter.end()
-               
-    
 
     def end(self):
         global menu
@@ -250,7 +319,7 @@ class Menu(QWidget):  # класс меню
                 return False
             
             self.admin, self.id = res[0]
-            self.mode_tx = 'Hard'
+            self.mode_tx = 'Easy'
             self.UI()  # переход в меню
         elif not self.password.text():
             self.error.setText('Введите пароль')
