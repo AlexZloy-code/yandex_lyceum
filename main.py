@@ -3,7 +3,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QInputDialog
 from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter, QBrush, QColor
-from PyQt6 import QtCore
+from PyQt6.QtCore import QSize, QDateTime
 import sqlite3
 import csv
 
@@ -81,8 +81,8 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
 
     def proba(self):
         """ Функция костылик нужная для отсчета секунды изменения цвета """
-        time = QtCore.QDateTime.currentDateTime().addSecs(1)
-        while QtCore.QDateTime.currentDateTime() < time:
+        time = QDateTime.currentDateTime().addSecs(1)
+        while QDateTime.currentDateTime() < time:
             pass
         self.mode = True
         self.update()
@@ -260,6 +260,7 @@ class Menu(QWidget):  # класс меню
         for i in self.children():  # убирание всех объектов предыдущего окна если такие найдутся
             i.setParent(None)
 
+        self.setWindowTitle('Registration')
         self.aut = QPushButton(self)  # кнопка проверки авторизации или создания аккаунта
         self.aut.setText('Авторизация')
         self.aut.move(300, 200)
@@ -340,7 +341,7 @@ class Menu(QWidget):  # класс меню
         icon = QIcon()
         icon.addPixmap(QPixmap("static/exit.jpg"))
         self.logout.setIcon(icon)
-        self.logout.setIconSize(QtCore.QSize(100, 100))
+        self.logout.setIconSize(QSize(100, 100))
 
         if self.admin:
             self.rule = QPushButton('Редактирование пользователей', self)  # кнопка перехода в правила игры
@@ -375,29 +376,20 @@ class Menu(QWidget):  # класс меню
         for i in self.children():
             i.setParent(None)  # скрытие элементов предыдущей вкладки
 
-        # объяснение правил
+        self.setWindowTitle('Rules')
         self.label = QLabel(self)
-        self.label.setText('Перед вами будет круг состоящий из нескольких цветов (от 2 до 6) в зависимости \
-от\nуровня сложности. С каждой правильно повторённой последовательнсотью на нем будут\nзагораться новый \
-сектор, в свою очередь вам надо повторить всю последовательность.')
-        self.label.move(0, 0)
-        self.label.resize(600, 120)
-        self.label.setFont(QFont('Times', 11))
-        self.label.show()
-
-        self.task = QLabel(self)
-        self.task.setText('Ваша задача, запомнить последовательность свечения секторов\nи воспроизвести её путём \
+        self.label.setText('Перед вами будет круг состоящий из нескольких цветов (от 2 до 6)\nв зависимости \
+от уровня сложности. С каждой правильно повторённой\nпоследовательнсотьюна нем будут загораться новый \
+сектор, в свою\nочередь вам надо повторить всю последовательност\n\nВаша задача, запомнить последовательность свечения секторов\nи воспроизвести её путём \
 нажатия на теже сектора')
-        self.task.move(0, 120)
-        self.task.resize(600, 120)
-        self.task.setFont(QFont('Times', 13))
-        self.task.show()
+        self.label.move(0, 20)
+        self.label.resize(600, 150)
+        self.label.setFont(QFont('Times', 13))
 
         self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
         self.btn_menu.move(400, 300)
         self.btn_menu.resize(200, 40)
         self.btn_menu.setFont(QFont('Times', 20))
-        self.btn_menu.show()
 
         self.mode = QComboBox(self)  # поле выбора режима
         self.mode.move(0, 300)
@@ -406,7 +398,9 @@ class Menu(QWidget):  # класс меню
             self.mode.addItem(i)
         self.mode.setFont(QFont('Times', 15))
         self.mode.resize(150, 40)
-        self.mode.show()
+
+        for i in self.children():
+            i.show()
 
         self.mode.activated.connect(self.change_mode)  # смена режима
 
@@ -479,14 +473,15 @@ class Menu(QWidget):  # класс меню
         for i in self.children():
             i.setParent(None)  # скрытие элементов предыдущей вкладки
 
+        self.setWindowTitle('Admin panel')
         self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
         self.btn_menu.move(400, 440)
         self.btn_menu.resize(200, 60)
         self.btn_menu.clicked.connect(self.check_out)
 
         self.rating = QLabel('Редактирование пользователей', self)  # название окна
-        self.rating.move(80, 30)
-        self.rating.resize(440, 60)
+        self.rating.move(50, 30)
+        self.rating.resize(500, 60)
         self.rating.setFont(QFont('Times', 25))
 
         self.all_items = list()
@@ -528,6 +523,7 @@ class Menu(QWidget):  # класс меню
         for i in self.children():
             i.setParent(None)  # скрытие элементов предыдущей вкладки
 
+        self.setWindowTitle('Reting')
         self.rating = QLabel('Рейтинг', self)  # название окна
         self.rating.move(220, 30)
         self.rating.resize(200, 60)
