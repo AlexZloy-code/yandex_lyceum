@@ -2,7 +2,7 @@ import random
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QInputDialog
 from PyQt6.QtWidgets import QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
-from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter, QBrush, QColor
+from PyQt6.QtGui import QFont, QIcon, QMouseEvent, QPixmap, QPainter, QBrush, QColor
 from PyQt6 import QtCore
 import sqlite3
 import csv
@@ -70,11 +70,11 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
             self.cor_posled.append(random.randint(0, 3))
         else:
             self.cor_posled.append(random.randint(0, 5))
-        for i in self.cor_posled:
-            self.do_paint = True
-            self.inx = i
-            self.mode = False
-            self.update()
+        self.do_paint = True
+        self.inx = self.cor_posled[-1]
+        self.mode = False
+        self.update()
+        self.posled = []
     
     def proba(self):
         time = QtCore.QDateTime.currentDateTime().addSecs(1)
@@ -85,70 +85,50 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
         self.setMouseTracking(True)
 
     def mousePressEvent(self, event):
-        if menu.mode_tx == 'Easy':
-            if (event.pos().x() - 230) ** 2 + (event.pos().y() - 220) ** 2 <= 150 ** 2:
-                if event.pos().y() == 220:
+        if (event.pos().x() - 230) ** 2 + (event.pos().y() - 220) ** 2 <= 150 ** 2:
+            if menu.mode_tx == 'Easy':
+                if event.pos().x() == 230:
                     return
-                elif event.pos().y() > 220:
-                    i = 0
-                else:
+                elif event.pos().x() > 230:
                     i = 1
-                self.do_paint = True
-                self.inx = i
-                self.mode = False
-                self.update()
-                self.posled.append(i)
-                print(self.posled)
-                print(self.cor_posled)
-                print('\n\n')
-                if self.posled != self.cor_posled[:len(self.posled)]:
-                    return self.end()
-                elif self.posled == self.cor_posled:
-                    self.posled = []
-                    self.make_posled()
-        elif menu.mode_tx == 'Medium':
-            if (event.pos().x() - 80) ** 2 + (event.pos().y() - 70) ** 2 <= 300:
-                if event.pos().x() == 80 or event.pos().y() == 70:
+                else:
+                    i = 0
+            elif menu.mode_tx == 'Medium':
+                if event.pos().x() == 230 or event.pos().y() == 220:
                     return
-                elif event.pos().x() > 80 and event.pos().y() > 70:
-                    i = 0
-                elif event.pos().x() < 80 and event.pos().y() > 70:
-                    i = 1
-                elif event.pos().x() < 80 and event.pos().y() < 70:
-                    i = 2
-                else:
+                elif event.pos().x() > 230 and event.pos().y() > 220:
                     i = 3
-                self.do_paint = True
-                self.inx = i
-                self.mode = False
-                self.update()
-                self.posled.append(i)
-                if self.posled not in self.cor_posled:
-                    self.end()
-                else:
-                    self.make_posled()
-        else:
-            if (event.pos().x() - 80) ** 2 + (event.pos().y() - 70) ** 2 <= 300:
-                if (event.pos().x() - 80) == (event.pos().y() - 70) or (event.pos().x() - 80) == -(event.pos().y() - 70) or event.pos().y() == 70:
-                    return
-                elif (event.pos().x() - 80) == (event.pos().y() - 70):
-                    i = 0
-                elif event.pos().x() < 80 and event.pos().y() > 70:
-                    i = 1
-                elif event.pos().x() < 80 and event.pos().y() < 70:
+                elif event.pos().x() < 230 and event.pos().y() > 220:
                     i = 2
+                elif event.pos().x() < 230 and event.pos().y() < 220:
+                    i = 1
                 else:
+                    i = 0
+            else:
+                if event.pos().x() == 230 or event.pos().y() == 220 or \
+                    (event.pos().x() - 230) * 3 ** 0.5 == (event.pos().y() - 220) or \
+                     (event.pos().x() - 230) * 3 ** 0.5 == -(event.pos().y() - 220):
+                    return
+                elif event.pos().y() < 220 and -(event.pos().x() - 230) * 3 ** 0.5 < (event.pos().y() - 220):
+                    i = 0
+                elif -(event.pos().x() - 230) * 3 ** 0.5 > (event.pos().y() - 220) and \
+                     (event.pos().x() - 230) * 3 ** 0.5 > (event.pos().y() - 220):
+                    i = 1
+                elif event.pos().y() < 220 and (event.pos().x() - 230) * 3 ** 0.5 < (event.pos().y() - 220):
+                    i = 2
+                elif event.pos().y() > 220 and -(event.pos().x() - 230) * 3 ** 0.5 > (event.pos().y() - 220):
                     i = 3
-                self.do_paint = True
-                self.inx = i
-                self.mode = False
-                self.update()
-                self.posled.append(i)
-                if self.posled not in self.cor_posled:
-                    self.end()
-                    self.posled = []
-                else:
-                    self.make_posled()
+                elif -(event.pos().x() - 230) * 3 ** 0.5 < (event.pos().y() - 220) and \
+                     (event.pos().x() - 230) * 3 ** 0.5 < (event.pos().y() - 220):
+                    i = 4
+                elif event.pos().y() > 220 and (event.pos().x() - 230) * 3 ** 0.5 > (event.pos().y() - 220):
+                    i = 5
+            self.posled.append(i)
+            if self.posled != self.cor_posled[:len(self.posled)]:
+                self.setMouseTracking(False)
+                return self.end()
+            elif self.posled == self.cor_posled:
+                self.make_posled()
 
     def paintEvent(self, event):
         if self.do_paint:
@@ -223,27 +203,27 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
     def end(self):
         global menu
 
-        for i in self.children():
-            i.deleteLater()  # скрытие всех элементов игры
-
         con = sqlite3.connect('db_files/gamers.db')
         cur = con.cursor()
         mas1 = ['Easy', 'Medium', 'Hard']
         mas2 = ['result_easy', 'result_medium', 'result_insame']
         mode = mas2[mas1.index(menu.mode_tx)]
+        schet = cur.execute(f"""SELECT {mode} FROM users
+                                              WHERE userid = '{menu.id}'""").fetchall()
         cur.execute(
-            f"""UPDATE users SET {mode} = '{self.count}'
+            f"""UPDATE users SET {mode} = '{max(schet[0][0], len(self.cor_posled) - 1)}'
                 WHERE userid = '{menu.id}'""").fetchall()  # запись результата
         con.commit()
 
+
         btn_menu = QPushButton('Menu', self)  # выход в меню
-        btn_menu.move(400, 200)
+        btn_menu.move(130, 200)
         btn_menu.resize(200, 60)
         btn_menu.setFont(QFont('Times', 25))
         btn_menu.show()
 
         btn_new_game = QPushButton('Again', self)  # ещё игра
-        btn_new_game.move(400, 300)
+        btn_new_game.move(130, 300)
         btn_new_game.resize(200, 60)
         btn_new_game.setFont(QFont('Times', 25))
         btn_new_game.show()
@@ -264,6 +244,7 @@ class Menu(QWidget):  # класс меню
     def __init__(self):
         super().__init__()
         self.reg()
+        self.setGeometry(0, 0, 600, 500)
 
     def reg(self):
         for i in self.children():
@@ -384,7 +365,8 @@ class Menu(QWidget):  # класс меню
         # объяснение правил
         self.label = QLabel(self)
         self.label.setText('Перед вами будет круг состоящий из нескольких цветов (от 2 до 6) в зависимости \
-от\nуровня сложности поочерёдно на нем будут загораться сектора.')
+от\nуровня сложности. С каждой правильно повторённой последовательнсотью на нем будут\nзагораться новый \
+сектор, в свою очередь вам надо повторить всю последовательность.')
         self.label.move(0, 0)
         self.label.resize(600, 120)
         self.label.setFont(QFont('Times', 11))
@@ -392,7 +374,7 @@ class Menu(QWidget):  # класс меню
 
         self.task = QLabel(self)
         self.task.setText('Ваша задача, запомнить последовательность свечения секторов\nи воспроизвести её путём \
-нажатия не теже сектора')
+нажатия на теже сектора')
         self.task.move(0, 120)
         self.task.resize(600, 120)
         self.task.setFont(QFont('Times', 13))
