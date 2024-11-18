@@ -219,9 +219,8 @@ WHERE name = '{name1}' OR name = '{name2}' OR name = '{name3}' OR name = '{name4
         mode = mas2[mas1.index(menu.mode_tx)]
         schet = cur.execute(f"""SELECT {mode} FROM users
                                               WHERE userid = '{menu.id}'""").fetchall()
-        cur.execute(
-            f"""UPDATE users SET {mode} = '{max(schet[0][0], len(self.cor_posled) - 1)}'
-                WHERE userid = '{menu.id}'""").fetchall()
+        cur.execute(f"""UPDATE users SET {mode} = '{max(schet[0][0], len(self.cor_posled) - 1)}'
+                        WHERE userid = '{menu.id}'""").fetchall()
         con.commit()
 
         btn_menu = QPushButton('Menu', self)  # выход в меню
@@ -255,6 +254,43 @@ class Menu(QWidget):  # класс меню
         self.reg()
         self.setGeometry(0, 0, 600, 500)
 
+        con = sqlite3.connect('db_files/gamers.db')  # Создание базы данных
+        cur = con.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS Users (
+                userid        INTEGER PRIMARY KEY,
+                login         TEXT,
+                password      TEXT,
+                admin_status  INTEGER,
+                result_easy   INTEGER,
+                result_medium INTEGER,
+                result_insame INTEGER
+            )
+        ''')
+        if not cur.execute(f"""SELECT userid FROM users
+                                             WHERE userid = 0""").fetchall():  # Проверка базы данных на наличие данных
+            cur.execute(f'''INSERT INTO Users('userid', 'login', 'password', 'admin_status', 'result_easy',\
+            'result_medium', 'result_insame')
+                                   VALUES(0, 'admin', 'admin', 1, 0, 0, 0)''')  # Если требуется, то добовляется главный администратор
+            con.commit()
+
+        con = sqlite3.connect('db_files/levels.db')  # Создание базы данных
+        cur = con.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS levels (
+                name      TEXT PRIMARY KEY,
+                color_off TEXT,
+                color_on  TEXT
+            )
+        ''')
+        if not cur.execute(f"""SELECT name FROM levels
+                                             WHERE name = 'Red'""").fetchall():  # Проверка базы данных на наличие данных
+            for i in (('Red', '#690e00', '#ff2200'), ('Blue', '#001463', '#0033ff'), ('Yellow', '#706900', '#ffee00'),
+                      ('Green', '#065202', '#0cc902'), ('Orange', '#a34e03', '#ff7800'), ('Purple', '#4b0354', '#e300ff')):
+                cur = cur.execute(f'''INSERT INTO levels('name', 'color_off', 'color_on')
+                                             VALUES('{i[0]}', '{i[1]}', '{i[2]}')''')  # Если требуется, то добовляются цвета секторов
+            con.commit()
+
     def reg(self):
         """ Функция для создания окна регистрации в приложении """
         for i in self.children():  # убирание всех объектов предыдущего окна если такие найдутся
@@ -276,6 +312,7 @@ class Menu(QWidget):  # класс меню
         self.login.setText('')
         self.login.move(75, 200)
         self.login.resize(100, 30)
+        self.login.setStyleSheet('border: 1px solid black;')
 
         self.password_tx = QLabel(self)  # текст запроса пароля аккаунта
         self.password_tx.setText('Введите свой пароль')
@@ -286,6 +323,7 @@ class Menu(QWidget):  # класс меню
         self.password.setText('')
         self.password.move(75, 300)
         self.password.resize(100, 30)
+        self.password.setStyleSheet('border: 1px solid black;')
 
         self.error = QLabel(self)  # ошибка введённых данных
         self.error.move(0, 400)
@@ -380,7 +418,8 @@ class Menu(QWidget):  # класс меню
         self.label = QLabel(self)
         self.label.setText('Перед вами будет круг состоящий из нескольких цветов (от 2 до 6)\nв зависимости \
 от уровня сложности. С каждой правильно повторённой\nпоследовательнсотьюна нем будут загораться новый \
-сектор, в свою\nочередь вам надо повторить всю последовательност\n\nВаша задача, запомнить последовательность свечения секторов\nи воспроизвести её путём \
+сектор, в свою\nочередь вам надо повторить всю последовательност\n\n\
+Ваша задача, запомнить последовательность свечения секторов\nи воспроизвести её путём \
 нажатия на теже сектора')
         self.label.move(0, 20)
         self.label.resize(600, 150)
@@ -424,37 +463,42 @@ class Menu(QWidget):  # класс меню
         cur = con.cursor()
 
         if raiting:  # Получение данных о пользователях и их обработка
-            stat = list(cur.execute(f"""SELECT userid, login, result_easy, result_medium, result_insame FROM users
-                                        WHERE admin_status = 0""").fetchall())
+            stat = list(cur.execute("""SELECT userid, login, result_easy, result_medium, result_insame FROM users
+                                       WHERE admin_status = 0""").fetchall())
             self.titles = [item[0] for item in cur.description[1:5]]
             column_count = 4
             titles = ['Name', 'Easy', 'Medium', 'Hard']  # Создание заголовков для таблицы
         else:
-            stat = list(cur.execute(f"""SELECT userid, login, password, result_easy, result_medium, result_insame, admin_status FROM users""").fetchall())
-            self.titles = [item[0] for item in cur.description[1:6]]
-            column_count = 5
-            titles = ['Name', 'Password', 'Easy', 'Medium', 'Hard']  # Создание заголовков для таблицы
+            stat = list(cur.execute("""SELECT * FROM users""").fetchall())
+            self.titles = [i[0] for i in cur.description]
+            column_count = 6
+            titles = ['Name', 'Password', 'Admin', 'Easy', 'Medium', 'Hard']  # Создание заголовков для таблицы
 
         self.statis_table = QTableWidget(len(stat), column_count, self)  # таблица рейтинга
         self.statis_table.move(0, 100)
         for i in range(column_count):
-            self.statis_table.setColumnWidth(i, 100)  # ширина колонок
+            if i != 2 and not raiting:
+                self.statis_table.setColumnWidth(i, 100)  # ширина колонок
+            else:
+                self.statis_table.setColumnWidth(i, 70)
             self.statis_table.setHorizontalHeaderItem(i, QTableWidgetItem(titles[i]))  # название колонок
 
         if stat:  # Задавание размеров таблицы
             if (len(stat) + 1) * 30 < 300:
-                self.statis_table.resize(300 + len(stat) * 65, (len(stat) + 1) * 30)
+                if raiting:
+                    self.statis_table.resize(305, (len(stat) + 1) * 30)
+                else:
+                    self.statis_table.resize(595, (len(stat) + 1) * 30)
             else:
-                self.statis_table.resize(300 + len(stat) * 65, 300)
+                self.statis_table.resize(300 + (len(stat[0]) + 1) * 30, 300)
         else:
-            self.statis_table.resize(300 + len(stat) * 60, 80)
+            self.statis_table.resize(300, 80)
 
         if raiting:
             self.statis_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # отмена возможности изменить таблицу
         else:
-            stat = [i for i in sorted(stat, key=lambda x: (-x[-1], x[1]))]   # Сортировка данных для таблицы
-            self.all_items = [[stat[i][x] for x in range(6)] for i in range(len(stat))]
-            stat = [i[:6] for i in stat]   # Создание списка для хранения всех данных и последующей смены данных в таблице
+            stat = [i for i in sorted(stat, key=lambda x: (-x[3], x[1]))]   # Сортировка данных для таблицы
+            self.all_items = [list(stat[i]) for i in range(len(stat))]
             self.statis_table.itemChanged.connect(self.item_changed)
 
         for i in range(len(stat)):
@@ -474,6 +518,17 @@ class Menu(QWidget):  # класс меню
             i.setParent(None)  # скрытие элементов предыдущей вкладки
 
         self.setWindowTitle('Admin panel')
+
+        self.btn_remove = QPushButton('Remove', self)  # кнопка возвращения в меню
+        self.btn_remove.move(0, 440)
+        self.btn_remove.resize(200, 60)
+        self.btn_remove.clicked.connect(self.remove_people)
+
+        self.btn_add = QPushButton('Add', self)  # кнопка возвращения в меню
+        self.btn_add.move(200, 440)
+        self.btn_add.resize(200, 60)
+        self.btn_add.clicked.connect(self.add_people)
+
         self.btn_menu = QPushButton('Menu', self)  # кнопка возвращения в меню
         self.btn_menu.move(400, 440)
         self.btn_menu.resize(200, 60)
@@ -484,8 +539,6 @@ class Menu(QWidget):  # класс меню
         self.rating.resize(500, 60)
         self.rating.setFont(QFont('Times', 25))
 
-        self.all_items = list()
-
         self.paint_table()
 
         self.flag_of_change_item = False   # Флажок значущий об отсутсвии изменений в таблице
@@ -493,6 +546,80 @@ class Menu(QWidget):  # класс меню
             if i != self.rating:
                 i.setFont(QFont('Times', 15))
             i.show()
+
+    def remove_people(self):
+        '''Функция удаления пользователя'''
+        id_acc, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter id of account:')
+        if ok:
+            if id_acc.isdigit() and 0 < int(id_acc) <= len(self.all_items):
+                con = sqlite3.connect('db_files/gamers.db')
+                cur = con.cursor()
+                id_acc_cor = self.all_items[int(id_acc) - 1][0]
+                if id_acc_cor == 0:
+                    error = QMessageBox()
+                    error.setWindowTitle("ОШИБКА")
+                    error.setText("Вы не можете изменить статус главного админа!")
+                    error.setIcon(QMessageBox.Icon.Warning)
+                    error.setStandardButtons(
+                        QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+                    )
+                    error.exec()
+                else:
+                    cur.execute(f'''DELETE FROM Users WHERE userid = {id_acc_cor}''')
+                    con.commit()
+                    self.admin_panel()
+                    sucsess = QMessageBox()
+                    sucsess.setWindowTitle("Успешно")
+                    sucsess.setText(f"Вы удалили пользователя с id = {id_acc}")
+                    sucsess.setIcon(QMessageBox.Icon.Information)
+                    sucsess.setStandardButtons(
+                        QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+                    )
+                    sucsess.exec()
+            else:
+                error = QMessageBox()
+                error.setWindowTitle("ОШИБКА")
+                error.setText("Такого аккаунта не существует или данные введены некорректно")
+                error.setIcon(QMessageBox.Icon.Warning)
+                error.setStandardButtons(
+                    QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+                )
+                error.exec()
+
+    def add_people(self):
+        '''Функция добавления пользователя'''
+        name, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter name of account:')
+        if ok:
+            password, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter password of account:')
+            if ok:
+                con = sqlite3.connect('db_files/gamers.db')
+                cur = con.cursor()
+                res = cur.execute(f"""SELECT * FROM users
+                                               WHERE password = '{password}'
+                                               AND login = '{name}'""").fetchall()  # поиск аккаунта
+                if not res:  # Обработка результата
+                    id_acc = [i[0] for i in self.all_items]
+                    cur.execute(f'''INSERT INTO Users('userid', 'login', 'password', 'admin_status', 'result_easy', 'result_medium', 'result_insame')
+                                    VALUES({max(id_acc) + 1}, '{name}', '{password}', 0, 0, 0, 0)''')
+                    con.commit()
+                    self.admin_panel()
+                    sucsess = QMessageBox()
+                    sucsess.setWindowTitle("Успешно")
+                    sucsess.setText("Вы создали нового пользователя")
+                    sucsess.setIcon(QMessageBox.Icon.Information)
+                    sucsess.setStandardButtons(
+                        QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+                    )
+                    sucsess.exec()
+                else:
+                    error = QMessageBox()
+                    error.setWindowTitle("ОШИБКА")
+                    error.setText("Такой аккаунт уже существует или данные введены некорректно")
+                    error.setIcon(QMessageBox.Icon.Warning)
+                    error.setStandardButtons(
+                        QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+                    )
+                    error.exec()
 
     def check_out(self):
         """ Функция подтверждения изменений данных """
@@ -506,14 +633,25 @@ class Menu(QWidget):  # класс меню
     def save_results(self):
         """ Сохранение данных из таблицы в db """
         for all_items in self.all_items:
+            all_items = [all_items[i] for i in (0, 1, 2, 3, 4, 5, 6)]
+            if all_items[0] == 0 and all_items[3] != '1':
+                all_items[3] = 1
+                error = QMessageBox()
+                error.setWindowTitle("ОШИБКА")
+                error.setText("Вы не можете изменить статус главного админа!")
+                error.setIcon(QMessageBox.Icon.Warning)
+                error.setStandardButtons(
+                    QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+                )
+                error.exec()
             con = sqlite3.connect('db_files/gamers.db')
             cur = con.cursor()
             que = "UPDATE Users SET\n"
-            for i in range(1, 6):
-                que += f"{self.titles[i - 1]} = '{all_items[i]}'"
-                if i < 5:
+            for i in range(7):
+                que += f"{self.titles[i]} = '{all_items[i]}'"
+                if i < 6:
                     que += ', '
-            que += f"WHERE userid = {all_items[0]}"
+            que += f" WHERE userid = {all_items[0]}"
             cur.execute(que)
             con.commit()
         self.all_items.clear()
